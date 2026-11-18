@@ -31,6 +31,17 @@ BRAND_KEYWORDS = [
 ]
 
 
+# 元数据字段（内部键, 中文标签）
+FIELDS = [
+    ("title", "标题"),
+    ("author", "作者"),
+    ("subject", "主题"),
+    ("keywords", "关键词"),
+    ("creator", "创建工具"),
+    ("producer", "生成工具"),
+]
+
+
 def detect_brand(meta: dict, xml: str = "") -> list:
     """返回 [(字段名, 原值, 命中关键词), ...]"""
     hits, seen = [], set()
@@ -149,8 +160,8 @@ def run_gui() -> None:
         root = tk.Tk()
 
     root.title("简历水印清理工具")
-    root.geometry("620x560")
-    root.minsize(560, 500)
+    root.geometry("620x720")
+    root.minsize(560, 640)
     root.configure(bg="#f4f6fa")
 
     state = {"files": []}
@@ -158,7 +169,7 @@ def run_gui() -> None:
     # ---- 顶部拖放区 ----
     drop = tk.Frame(root, bg="#e8eefc", highlightthickness=2,
                     highlightbackground="#9db8e8", cursor="hand2")
-    drop.pack(fill="x", padx=24, pady=(22, 10), ipady=34)
+    drop.pack(fill="x", padx=24, pady=(18, 8), ipady=22)
     drop_lbl = tk.Label(drop, text="将 PDF 拖到这里，或点击选择文件",
                         bg="#e8eefc", fg="#34508c",
                         font=("Microsoft YaHei UI", 13, "bold"))
@@ -175,6 +186,9 @@ def run_gui() -> None:
             # 默认标题 = 第一个文件的文件名（不含扩展名）
             title_var.set(os.path.splitext(os.path.basename(paths[0]))[0])
             detect_and_show(paths[0])
+            if len(paths) > 1:
+                det_var.set(f"已选择 {len(paths)} 个文件，批量处理；下方显示第 1 个文件的属性\n"
+                            + det_var.get())
         btn_run.config(state="normal" if paths else "disabled")
 
     def detect_and_show(path):
@@ -182,19 +196,22 @@ def run_gui() -> None:
             doc = pymupdf.open(path)
             if doc.needs_pass and not doc.authenticate(""):
                 det_var.set("⚠ 文件已加密，无法处理")
+                meta_title.config(text="原文件属性明细")
+                render_meta_panel({})
                 doc.close(); return
             xml = ""
             try:
                 xml = doc.get_xml_metadata() or ""
             except Exception:
                 pass
-            hits = detect_brand(doc.metadata, xml)
-            old_title = doc.metadata.get("title", "") or "（空）"
+            meta = doc.metadata
+            render_meta_panel(meta, xml)
+            hits = detect_brand(meta, xml)
+            old_title = meta.get("title", "") or "（空）"
             doc.close()
             if hits:
                 det_var.set(f"检测到品牌水印：{old_title}")
-                det_var_color = "#b3261e"
-                det_lbl.config(fg=det_var_color)
+                det_lbl.config(fg="#b3261e")
             else:
                 det_var.set("未检测到品牌水印（仍可按下方输入更新标题）")
                 det_lbl.config(fg="#1b7f4d")
@@ -219,6 +236,54 @@ def run_gui() -> None:
     det_lbl = tk.Label(root, textvariable=det_var, bg="#f4f6fa", fg="#5a6b8c",
                        font=("Microsoft YaHei UI", 10), wraplength=560, justify="left")
     det_lbl.pack(anchor="w", padx=26)
+
+    # ---- 原文件元数据明细 ----
+    meta_frame = tk.Frame(root, bg="#f4f6fa")
+    meta_frame.pack(fill="x", padx=26, pady=(2, 0))
+    meta_title = tk.Label(meta_frame, text="原文件属性明细（放入文件后显示）", bg="#f4f6fa", fg="#444",
+                          font=("Microsoft YaHei UI", 9, "bold"), anchor="w")
+    meta_title.pack(anchor="w", pady=(2, 2))
+    tk.Label(meta_frame, text="尚未放入文件", bg="#f4f6fa", fg="#aaa",
+             font=("Microsoft YaHei UI", 9)).pack(anchor="w")
+
+    def render_meta_panel(meta: dict, xml: str = ""):
+        """清空并按当前文件的元数据重建字段明细表"""
+        for child in meta_frame.winfo_children():
+            if child is not meta_title:
+                child.destroy()
+        any_brand = False
+        for key, label in FIELDS:
+            val = (meta.get(key) or "").strip()
+            brand = any(kw.lower() in val.lower() for kw in BRAND_KEYWORDS)
+            tool = key in ("creator", "producer") and bool(val)
+            any_brand = any_brand or brand
+            shown = val if val else "（空）"
+            if len(shown) > 46:
+                shown = shown[:46] + "…"
+            row = tk.Frame(meta_frame, bg="#f4f6fa")
+            row.pack(fill="x")
+            tk.Label(row, text=label, bg="#f4f6fa", fg="#222", width=9,
+                     font=("Microsoft YaHei UI", 9, "bold"), anchor="w").pack(side="left")
+            vfg = "#666" if val else "#aaa"
+            tk.Label(row, text=shown, bg="#f4f6fa", fg=vfg,
+                     font=("Microsoft YaHei UI", 9), anchor="w",
+                     wraplength=330, justify="left").pack(side="left", padx=(2, 6))
+            if brand:
+                tk.Label(row, text="⚠ 品牌水印", bg="#f4f6fa", fg="#b3261e",
+                         font=("Microsoft YaHei UI", 9, "bold")).pack(side="right")
+            elif tool:
+                tk.Label(row, text="⚠ 导出工具痕迹", bg="#f4f6fa", fg="#b26a00",
+                         font=("Microsoft YaHei UI", 9)).pack(side="right")
+            else:
+                tk.Label(row, text="✓", bg="#f4f6fa", fg="#1b7f4d",
+                         font=("Microsoft YaHei UI", 9)).pack(side="right")
+        notes = []
+        if any(kw.lower() in xml.lower() for kw in BRAND_KEYWORDS):
+            notes.append("⚠ XMP 元数据中也含品牌文字（将一并清理）")
+        if notes:
+            tk.Label(meta_frame, text="\n".join(notes), bg="#f4f6fa", fg="#b3261e",
+                     font=("Microsoft YaHei UI", 8), anchor="w", justify="left").pack(anchor="w", pady=(3, 0))
+        meta_title.config(text="原文件属性明细（上方标 ⚠ 的字段会被修改/清除）")
 
     # ---- 设置区 ----
     form = tk.Frame(root, bg="#f4f6fa")

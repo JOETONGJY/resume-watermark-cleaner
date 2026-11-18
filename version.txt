@@ -1,0 +1,28 @@
+# UTF-8
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(1, 1, 0, 0),
+    prodvers=(1, 1, 0, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo([
+      StringTable('080404b0', [
+        StringStruct('CompanyName', 'JOETONGJY'),
+        StringStruct('FileDescription', '简历水印清理工具 - 清除在线简历工具写入PDF元数据的品牌水印'),
+        StringStruct('ProductName', 'Resume Watermark Cleaner'),
+        StringStruct('FileVersion', '1.1.0'),
+        StringStruct('ProductVersion', '1.1.0'),
+        StringStruct('InternalName', 'ResumeCleaner'),
+        StringStruct('OriginalFilename', 'ResumeCleaner.exe'),
+        StringStruct('LegalCopyright', 'MIT License (c) 2026 JOETONGJY')
+      ])
+    ]),
+    VarFileInfo([VarStruct('Translation', [2052, 1200])])
+  ]
+)
