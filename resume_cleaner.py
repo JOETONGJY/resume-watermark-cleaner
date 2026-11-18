@@ -106,16 +106,8 @@ def clean_pdf(src: str, new_title: str, new_author: str = "",
                 except Exception:
                     pass
 
-        safe = re.sub(r'[\\/:*?"<>|\r\n\t]+', "_", new_title).strip(" .")
         base, ext = os.path.splitext(src)
-        stem = os.path.basename(base)
-        # 输出文件以新标题命名；新标题与原文件名相同（或为空）时加 _无水印 后缀防覆盖
-        if safe and safe != stem:
-            dst = os.path.join(os.path.dirname(src), safe + ext)
-        else:
-            dst = f"{base}_无水印{ext}"
-        if os.path.abspath(dst) == os.path.abspath(src):
-            dst = f"{base}_无水印{ext}"
+        dst = f"{base}_无水印{ext}"
         doc.save(dst, garbage=4, deflate=True)
     finally:
         doc.close()
@@ -198,6 +190,12 @@ def run_gui() -> None:
             if len(paths) > 1:
                 det_var.set(f"已选择 {len(paths)} 个文件，批量处理；下方显示第 1 个文件的属性\n"
                             + det_var.get())
+                out_var.set("导出文件名：每个文件各自变为 〈原文件名〉_无水印.pdf（同一文件夹内）")
+            else:
+                stem = os.path.splitext(os.path.basename(paths[0]))[0]
+                out_var.set(f"导出文件名：{stem}_无水印.pdf（保存在原文件同一文件夹）")
+        else:
+            out_var.set("")
         btn_run.config(state="normal" if paths else "disabled")
 
     def detect_and_show(path):
@@ -318,6 +316,12 @@ def run_gui() -> None:
                    anchor="w").grid(row=2, column=0, columnspan=2, sticky="w", pady=(2, 0))
     form.columnconfigure(1, weight=1)
 
+    # ---- 导出文件名提示 ----
+    out_var = tk.StringVar(value="")
+    out_lbl = tk.Label(root, textvariable=out_var, bg="#f4f6fa", fg="#2f6edb",
+                       font=("Microsoft YaHei UI", 9, "bold"), anchor="w", justify="left")
+    out_lbl.pack(anchor="w", padx=26, pady=(6, 0))
+
     # ---- 状态 & 按钮 ----
     status_var = tk.StringVar(value="")
     status_lbl = tk.Label(root, textvariable=status_var, bg="#f4f6fa", fg="#333",
@@ -377,8 +381,8 @@ def run_gui() -> None:
     btn_run.config(command=do_run)
 
     tk.Label(root, text="处理原则：只改文件属性（元数据），页面内容保持原样；\n"
-                        "输入的文字写入 PDF 内部标题（浏览器标签页显示它）；\n"
-                        "结果另存为新文件、以新标题命名（与原文件同名时加 _无水印），不覆盖原文件。",
+                        "输入的文字写入 PDF 内部标题（浏览器标签页显示它），不改变文件名；\n"
+                        "结果另存为 〈原文件名〉_无水印.pdf，不覆盖原文件。",
              bg="#f4f6fa", fg="#8a94a6", font=("Microsoft YaHei UI", 9),
              justify="left").pack(side="bottom", anchor="w", padx=26, pady=(0, 10))
 

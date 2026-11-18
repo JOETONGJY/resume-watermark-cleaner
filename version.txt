@@ -16,8 +16,8 @@ VSVersionInfo(
         StringStruct('CompanyName', 'JOETONGJY'),
         StringStruct('FileDescription', '简历水印清理工具 - 清除在线简历工具写入PDF元数据的品牌水印'),
         StringStruct('ProductName', 'Resume Watermark Cleaner'),
-        StringStruct('FileVersion', '1.2.0'),
-        StringStruct('ProductVersion', '1.2.0'),
+        StringStruct('FileVersion', '1.2.1'),
+        StringStruct('ProductVersion', '1.2.1'),
         StringStruct('InternalName', 'ResumeCleaner'),
         StringStruct('OriginalFilename', 'ResumeCleaner.exe'),
         StringStruct('LegalCopyright', 'MIT License (c) 2026 JOETONGJY')
