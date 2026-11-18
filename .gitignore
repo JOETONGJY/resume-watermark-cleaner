@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# 本地测试文件
+*.pdf
+!docs/*.pdf
+
+# IDE / 系统
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
