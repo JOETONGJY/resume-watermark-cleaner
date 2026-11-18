@@ -106,8 +106,16 @@ def clean_pdf(src: str, new_title: str, new_author: str = "",
                 except Exception:
                     pass
 
+        safe = re.sub(r'[\\/:*?"<>|\r\n\t]+', "_", new_title).strip(" .")
         base, ext = os.path.splitext(src)
-        dst = f"{base}_无水印{ext}"
+        stem = os.path.basename(base)
+        # 输出文件以新标题命名；新标题与原文件名相同（或为空）时加 _无水印 后缀防覆盖
+        if safe and safe != stem:
+            dst = os.path.join(os.path.dirname(src), safe + ext)
+        else:
+            dst = f"{base}_无水印{ext}"
+        if os.path.abspath(dst) == os.path.abspath(src):
+            dst = f"{base}_无水印{ext}"
         doc.save(dst, garbage=4, deflate=True)
     finally:
         doc.close()
@@ -117,7 +125,8 @@ def clean_pdf(src: str, new_title: str, new_author: str = "",
     ok = (chk.metadata.get("title") == new_title)
     n_pages = chk.page_count
     chk.close()
-    note = f"共 {n_pages} 页，内容未改动" + ("" if hits else "（未检测到品牌水印，仅更新了标题）")
+    note = f"标题已写入「{new_title}」；共 {n_pages} 页，页面内容未改动" + \
+           ("" if hits else "（未检测到品牌水印，仅更新了标题）")
     return dst, ok, hits, note
 
 
@@ -333,18 +342,33 @@ def run_gui() -> None:
 
         def worker():
             lines = []
+            out_panel = None  # (meta, xml) 最后一个成功输出的属性，处理后展示
             for p in state["files"]:
                 try:
                     dst, ok, hits, note = clean_pdf(p, new_title, author_var.get().strip(),
                                                     scrub_var.get())
                     mark = "✓" if ok else "✗"
                     lines.append(f"{mark} {os.path.basename(p)} → {dst}\n    {note}")
+                    if ok:
+                        try:
+                            d2 = pymupdf.open(dst)
+                            xml2 = ""
+                            try:
+                                xml2 = d2.get_xml_metadata() or ""
+                            except Exception:
+                                pass
+                            out_panel = (d2.metadata, xml2)
+                            d2.close()
+                        except Exception:
+                            out_panel = None
                 except Exception as e:
                     lines.append(f"✗ {os.path.basename(p)}：{e}")
+
             def done():
                 status_var.set("\n".join(lines))
-                if dnd_ok:
-                    pass
+                if out_panel:
+                    render_meta_panel(out_panel[0], out_panel[1])
+                    meta_title.config(text="处理后的属性明细（输出文件，供确认）")
                 btn_run.config(state="normal")
             root.after(0, done)
 
@@ -353,9 +377,10 @@ def run_gui() -> None:
     btn_run.config(command=do_run)
 
     tk.Label(root, text="处理原则：只改文件属性（元数据），页面内容保持原样；\n"
-                        "结果另存为 <原文件名>_无水印.pdf，不覆盖原文件。",
+                        "输入的文字写入 PDF 内部标题（浏览器标签页显示它）；\n"
+                        "结果另存为新文件、以新标题命名（与原文件同名时加 _无水印），不覆盖原文件。",
              bg="#f4f6fa", fg="#8a94a6", font=("Microsoft YaHei UI", 9),
-             justify="left").pack(side="bottom", anchor="w", padx=26, pady=(0, 12))
+             justify="left").pack(side="bottom", anchor="w", padx=26, pady=(0, 10))
 
     if not dnd_ok:
         det_var.set("（当前环境不支持拖拽，请点击上方区域选择文件）")
