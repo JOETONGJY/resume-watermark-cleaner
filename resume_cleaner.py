@@ -289,7 +289,7 @@ def run_gui() -> None:
 
     tk.Label(root, text="处理原则：只改文件属性（元数据），页面内容保持原样；\n"
                         "结果另存为 <原文件名>_无水印.pdf，不覆盖原文件。",
-             bg="#f4f6fa", fg="#8a94a6", font=("Microsoft YaHei UI", 8.5),
+             bg="#f4f6fa", fg="#8a94a6", font=("Microsoft YaHei UI", 9),
              justify="left").pack(side="bottom", anchor="w", padx=26, pady=(0, 12))
 
     if not dnd_ok:
@@ -302,7 +302,15 @@ def main():
     argv = sys.argv[1:]
     if "--selftest" in argv or "--input" in argv:
         sys.exit(run_cli())
-    run_gui()
+    try:
+        run_gui()
+    except Exception:
+        # --noconsole 打包后崩溃无处显示，写入日志便于排查
+        import traceback
+        log = os.path.join(os.path.expanduser("~"), "ResumeCleaner_crash.log")
+        with open(log, "w", encoding="utf-8") as f:
+            f.write(traceback.format_exc())
+        raise
 
 
 if __name__ == "__main__":
